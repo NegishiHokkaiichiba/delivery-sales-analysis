@@ -1,0 +1,6 @@
+streamlit>=1.32
+pandas>=2.2
+plotly>=5.20
+openpyxl>=3.1
+jpholiday>=0.1.7
+meteostat>=1.6
