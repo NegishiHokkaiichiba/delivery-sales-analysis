@@ -14,7 +14,6 @@ try:
 except ImportError:
     Point = None
     Daily = None
-# test
 # --- アプリ設定: ワイドレイアウト ---
 st.set_page_config(layout='wide')
 
