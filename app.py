@@ -12,7 +12,9 @@ source = uploaded if uploaded is not None else DEFAULT_FILE
 @st.cache_data
 def load_data(path):
     df = pd.read_excel(path, sheet_name='Master', dtype={'日付': str})
-    df['日付'] = pd.to_datetime(df['日付']).dt.date
+    df['日付'] = pd.to_datetime(df['日付'], errors='coerce')
+    df = df.dropna(subset=['日付'])
+    df['日付'] = df['日付'].dt.date
     return df
 
 try:
