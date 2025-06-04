@@ -52,50 +52,57 @@ def get_valid_months(df):
     return sorted(months)
 
 valid_months = get_valid_months(master)
-if 'selected_month' not in st.session_state:
-    st.session_state.selected_month = valid_months[-1]
-selected_month = st.sidebar.selectbox(
-    '月を選択', valid_months,
-    index=valid_months.index(st.session_state.selected_month),
-    key='selected_month'
-)
 
-compare_options = ['(比較しない)'] + valid_months
-if 'compare_month' not in st.session_state:
-    default_idx = len(compare_options) - 2 if len(compare_options) > 2 else 0
-    st.session_state.compare_month = compare_options[default_idx]
-compare_month = st.sidebar.selectbox(
-    '比較月', compare_options,
-    index=compare_options.index(st.session_state.compare_month),
-    key='compare_month'
-)
-
-year, mon = selected_month.split('-')
-jmonth = f"{year}年{int(mon)}月"
-if compare_month != '(比較しない)':
-    c_year, c_mon = compare_month.split('-')
-    jmonth_cmp = f"{c_year}年{int(c_mon)}月"
-else:
-    jmonth_cmp = ''
-
-# --- 3. 指標選択 ---
 metric_options = ['全てを表示'] + list(metric_suffix_map.keys())
-if 'metric_label' not in st.session_state:
-    st.session_state.metric_label = metric_options[1]
-for m in metric_options:
-    if st.sidebar.button(m):
-        st.session_state.metric_label = m
-metric_label = st.session_state.metric_label
+
+# --- 入力レイアウト: 左列にまとめる ---
+left, _ = st.columns([1, 3])
+with left:
+    st.header('設定')
+    mode = st.radio('分析モード', ['月単位', '期間指定'], key='mode')
+    metric_label = st.selectbox('表示指標', metric_options, key='metric_label')
+    if mode == '月単位':
+        selected_month = st.selectbox('対象月', valid_months, index=len(valid_months)-1, key='selected_month')
+        cmp_choice = st.radio('比較', ['なし', '先月比', '前年同月比'], horizontal=True, key='cmp_choice')
+    else:
+        date_range = st.date_input(
+            '期間', [master['日付'].min(), master['日付'].max()], key='date_range'
+        )
 
 # 色マップ
-color_map = {'Uber':'green', 'Wolt':'skyblue', 'menu':'red'}
+color_map = {'Uber': 'green', 'Wolt': 'skyblue', 'menu': 'red'}
 
 # --- 4. データ抽出 ---
-df_sel = master[master['Month'] == selected_month]
-df_cmp = master[master['Month'] == compare_month] if compare_month != '(比較しない)' else None
+if mode == '月単位':
+    df_sel = master[master['Month'] == selected_month]
+    if cmp_choice == '先月比':
+        compare_month = (pd.to_datetime(selected_month) - pd.offsets.MonthBegin(1)).strftime('%Y-%m')
+    elif cmp_choice == '前年同月比':
+        compare_month = (pd.to_datetime(selected_month) - pd.DateOffset(years=1)).strftime('%Y-%m')
+    else:
+        compare_month = None
+    df_cmp = master[master['Month'] == compare_month] if compare_month in valid_months else None
+    year, mon = selected_month.split('-')
+    jmonth = f"{year}年{int(mon)}月"
+    if compare_month:
+        c_year, c_mon = compare_month.split('-')
+        jmonth_cmp = f"{c_year}年{int(c_mon)}月"
+    else:
+        jmonth_cmp = ''
+    period_start = pd.to_datetime(selected_month + '-01')
+    period_end = (period_start + pd.offsets.MonthEnd(1)).to_pydatetime()
+else:
+    start_date = pd.to_datetime(date_range[0])
+    end_date = pd.to_datetime(date_range[1])
+    df_sel = master[(master['日付'] >= start_date) & (master['日付'] <= end_date)]
+    df_cmp = None
+    jmonth = f"{start_date.strftime('%Y/%m/%d')}〜{end_date.strftime('%Y/%m/%d')}"
+    jmonth_cmp = ''
+    period_start = start_date
+    period_end = end_date
+    
 platforms = sorted({col.split('_')[0] for col in metric_cols})
-# menuが適用外の月は除外
-if selected_month > '2024-10' and 'menu' in platforms:
+if mode == '月単位' and selected_month > '2024-10' and 'menu' in platforms:
     platforms.remove('menu')
 
 # --- 5. タイトル ---
@@ -230,8 +237,8 @@ else:
 
     # 気象
     if Point and Daily:
-        start = datetime.datetime(int(year), int(mon), 1)
-        end = (start + pd.offsets.MonthEnd(1)).to_pydatetime()
+        start = period_start
+        end = period_end
         loc = Point(43.06417, 141.34694)
         try:
             weather = Daily(loc, start, end).fetch()[['tmin','tmax','tavg','prcp']].reset_index()
