@@ -100,7 +100,7 @@ else:
     jmonth_cmp = ''
     period_start = start_date
     period_end = end_date
-    
+
 platforms = sorted({col.split('_')[0] for col in metric_cols})
 if mode == '月単位' and selected_month > '2024-10' and 'menu' in platforms:
     platforms.remove('menu')
@@ -111,116 +111,120 @@ if jmonth_cmp:
     title = f"{jmonth} vs {jmonth_cmp} {metric_label} 比較"
 st.title(title)
 
-# --- 6. 全指標表示 ---
-if metric_label == '全てを表示':
-    def summarize(df):
-        records = []
-        for plat in platforms:
-            rec = {'プラットフォーム': plat}
-            for lbl, suf in metric_suffix_map.items():
-                col = f"{plat}{suf}"
-                rec[lbl] = int(df[col].sum()) if col in df else 0
-            records.append(rec)
-        return pd.DataFrame(records).set_index('プラットフォーム')
+tab_summary, tab_daily = st.tabs(["概要", "日別推移"])
 
-    df_all = summarize(df_sel)
-    st.header('全指標一覧')
-    st.table(df_all)
+with tab_summary:
+    # --- 6. 全指標表示 ---
+    if metric_label == '全てを表示':
+        def summarize(df):
+            records = []
+            for plat in platforms:
+                rec = {'プラットフォーム': plat}
+                for lbl, suf in metric_suffix_map.items():
+                    col = f"{plat}{suf}"
+                    rec[lbl] = int(df[col].sum()) if col in df else 0
+                records.append(rec)
+            return pd.DataFrame(records).set_index('プラットフォーム')
 
-    if df_cmp is not None:
-        df_cmp_all = summarize(df_cmp)
-        diff = df_cmp_all - df_all
-        growth = (df_cmp_all / df_all.replace(0, pd.NA) - 1).fillna(0)
-        cmp_table = pd.concat([
-            df_all.add_suffix(f'({jmonth})'),
-            df_cmp_all.add_suffix(f'({jmonth_cmp})'),
-            diff.add_suffix(' 差分'),
-            (growth*100).round(1).add_suffix(' 増減%')
-        ], axis=1)
-        st.subheader('比較表')
-        st.table(cmp_table)
+        df_all = summarize(df_sel)
+        st.header('全指標一覧')
+        st.table(df_all)
 
-        graph_records = []
-        for plat in platforms:
-            for lbl in metric_suffix_map.keys():
-                graph_records.append({'プラットフォーム': plat, '指標': lbl, '月': jmonth, '値': df_all.loc[plat, lbl]})
-                graph_records.append({'プラットフォーム': plat, '指標': lbl, '月': jmonth_cmp, '値': df_cmp_all.loc[plat, lbl]})
-        df_graph = pd.DataFrame(graph_records)
+        if df_cmp is not None:
+            df_cmp_all = summarize(df_cmp)
+            diff = df_cmp_all - df_all
+            growth = (df_cmp_all / df_all.replace(0, pd.NA) - 1).fillna(0)
+            cmp_table = pd.concat([
+                df_all.add_suffix(f'({jmonth})'),
+                df_cmp_all.add_suffix(f'({jmonth_cmp})'),
+                diff.add_suffix(' 差分'),
+                (growth*100).round(1).add_suffix(' 増減%')
+            ], axis=1)
+            st.subheader('比較表')
+            st.table(cmp_table)
+
+            graph_records = []
+            for plat in platforms:
+                for lbl in metric_suffix_map.keys():
+                    graph_records.append({'プラットフォーム': plat, '指標': lbl, '月': jmonth, '値': df_all.loc[plat, lbl]})
+                    graph_records.append({'プラットフォーム': plat, '指標': lbl, '月': jmonth_cmp, '値': df_cmp_all.loc[plat, lbl]})
+            df_graph = pd.DataFrame(graph_records)
+        else:
+            df_graph = df_all.reset_index().melt(id_vars='プラットフォーム', var_name='指標', value_name='値')
+            df_graph['月'] = jmonth
+
+        fig_all = px.bar(
+            df_graph,
+            x='プラットフォーム',
+            y='値',
+            color='月',
+            barmode='group',
+            facet_col='指標',
+            category_orders={'月': [jmonth, jmonth_cmp] if jmonth_cmp else [jmonth]},
+            color_discrete_sequence=px.colors.qualitative.Set2
+        )
+        fig_all.update_layout(hovermode='x unified')
+        st.plotly_chart(fig_all, use_container_width=True)
+
+    # --- 7. 単一指標表示 ---
     else:
-        df_graph = df_all.reset_index().melt(id_vars='プラットフォーム', var_name='指標', value_name='値')
-        df_graph['月'] = jmonth
-
-    fig_all = px.bar(
-        df_graph,
-        x='プラットフォーム',
-        y='値',
-        color='月',
-        barmode='group',
-        facet_col='指標',
-        category_orders={'月': [jmonth, jmonth_cmp] if jmonth_cmp else [jmonth]},
-        color_discrete_sequence=px.colors.qualitative.Set2
-    )
-    fig_all.update_layout(hovermode='x unified')
-    st.plotly_chart(fig_all, use_container_width=True)
-
-# --- 7. 単一指標表示 ---
-else:
-    suf = metric_suffix_map[metric_label]
-    summary = []
-    for plat in platforms:
-        col = f"{plat}{suf}"
-        if col in df_sel.columns:
-            v = int(df_sel[col].sum())
-            if v > 0:
-                summary.append({'プラットフォーム': plat, metric_label: v})
-    df_summary = pd.DataFrame(summary)
-
-    if df_cmp is not None:
-        summary_cmp = []
+        suf = metric_suffix_map[metric_label]
+        summary = []
         for plat in platforms:
             col = f"{plat}{suf}"
-            if col in df_cmp.columns:
-                v = int(df_cmp[col].sum())
+            if col in df_sel.columns:
+                v = int(df_sel[col].sum())
                 if v > 0:
-                    summary_cmp.append({'プラットフォーム': plat, metric_label: v})
-        df_cmp_summary = pd.DataFrame(summary_cmp)
-        df_cmp_summary = df_cmp_summary.set_index('プラットフォーム')
-        df_summary = df_summary.set_index('プラットフォーム')
-        diff = df_cmp_summary - df_summary
-        growth = (df_cmp_summary / df_summary.replace(0, pd.NA) - 1).fillna(0)
-        cmp_table = pd.concat([
-            df_summary.add_suffix(f'({jmonth})'),
-            df_cmp_summary.add_suffix(f'({jmonth_cmp})'),
-            diff.add_suffix(' 差分'),
-            (growth*100).round(1).add_suffix(' 増減%')
-        ], axis=1)
-        st.subheader('比較表')
-        st.table(cmp_table)
+                    summary.append({'プラットフォーム': plat, metric_label: v})
+        df_summary = pd.DataFrame(summary)
 
-        df_graph = pd.concat([
-            df_summary.reset_index().assign(月=jmonth),
-            df_cmp_summary.reset_index().assign(月=jmonth_cmp)
-        ])
-        fig1 = px.bar(
-            df_graph, x='プラットフォーム', y=metric_label, color='月',
-            barmode='group', color_discrete_sequence=px.colors.qualitative.Set2
-        )
-        st.plotly_chart(fig1, use_container_width=True)
-    else:
-        c1, c2 = st.columns(2)
-        with c1:
-            st.subheader('構成比')
-            fig1 = px.pie(
-                df_summary, names='プラットフォーム', values=metric_label,
-                color='プラットフォーム', color_discrete_map=color_map
+        if df_cmp is not None:
+            summary_cmp = []
+            for plat in platforms:
+                col = f"{plat}{suf}"
+                if col in df_cmp.columns:
+                    v = int(df_cmp[col].sum())
+                    if v > 0:
+                        summary_cmp.append({'プラットフォーム': plat, metric_label: v})
+            df_cmp_summary = pd.DataFrame(summary_cmp)
+            df_cmp_summary = df_cmp_summary.set_index('プラットフォーム')
+            df_summary = df_summary.set_index('プラットフォーム')
+            diff = df_cmp_summary - df_summary
+            growth = (df_cmp_summary / df_summary.replace(0, pd.NA) - 1).fillna(0)
+            cmp_table = pd.concat([
+                df_summary.add_suffix(f'({jmonth})'),
+                df_cmp_summary.add_suffix(f'({jmonth_cmp})'),
+                diff.add_suffix(' 差分'),
+                (growth*100).round(1).add_suffix(' 増減%')
+            ], axis=1)
+            st.subheader('比較表')
+            st.table(cmp_table)
+
+            df_graph = pd.concat([
+                df_summary.reset_index().assign(月=jmonth),
+                df_cmp_summary.reset_index().assign(月=jmonth_cmp)
+            ])
+            fig1 = px.bar(
+                df_graph, x='プラットフォーム', y=metric_label, color='月',
+                barmode='group', color_discrete_sequence=px.colors.qualitative.Set2
             )
-            fig1.update_traces(textinfo='percent+label', hoverlabel=dict(font_size=16))
             st.plotly_chart(fig1, use_container_width=True)
-        with c2:
-            st.subheader('数値')
-            st.table(df_summary.set_index('プラットフォーム'))
+        else:
+            c1, c2 = st.columns(2)
+            with c1:
+                st.subheader('構成比')
+                fig1 = px.pie(
+                    df_summary, names='プラットフォーム', values=metric_label,
+                    color='プラットフォーム', color_discrete_map=color_map
+                )
+                fig1.update_traces(textinfo='percent+label', hoverlabel=dict(font_size=16))
+                st.plotly_chart(fig1, use_container_width=True)
+            with c2:
+                st.subheader('数値')
+                st.table(df_summary.set_index('プラットフォーム'))
 
-    # --- 8. 日別推移 ---
+with tab_daily:
+
     st.subheader('日別推移（曜日・気温・天候）')
     val_cols = [f"{plat}{suf}" for plat in platforms]
     pivot = df_sel.groupby('日付')[val_cols].sum().reset_index()
