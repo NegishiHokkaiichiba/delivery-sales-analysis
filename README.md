@@ -12,13 +12,27 @@
 - 月を 2 つ選択すると差分や増減率を自動計算して表示します。
 - サイドバーから Excel ファイルをアップロードすると独自の売上データで分析できます。
 
+## 必要条件
+
+- Windows 10/11
+- Python 3.8 以上（推奨）
+- PowerShell または コマンドプロンプト
+
 ## 使い方
 
-1. 依存パッケージをインストールします。
+1.仮想環境 .venv を作成
+   ```bash
+   py -m venv .venv
+   ```
+2.仮想環境を有効化（PowerShell）
+  ```bash
+   .\.venv\Scripts\Activate.ps1
+  ``` 
+3. 依存パッケージをインストールします。
    ```bash
    py -m pip install -r requirements.txt
    ```
-2. アプリを起動します。
+4. アプリを起動します。
    ```bash
    streamlit run app.py
    ```
