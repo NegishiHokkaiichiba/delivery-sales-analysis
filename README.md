@@ -16,7 +16,7 @@
 
 1. 依存パッケージをインストールします。
    ```bash
-   pip install -r requirements.txt
+   py -m pip install -r requirements.txt
    ```
 2. アプリを起動します。
    ```bash
