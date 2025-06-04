@@ -99,6 +99,7 @@ else:
     jmonth_cmp = ''
     period_start = start_date
     period_end = end_date
+
 platforms = sorted({col.split('_')[0] for col in metric_cols})
 if mode == '月単位' and selected_month > '2024-10' and 'menu' in platforms:
     platforms.remove('menu')
@@ -170,6 +171,7 @@ with tab_summary:
         if suf is None:
             st.error('未対応の指標が選択されました')
             st.stop()
+
         summary = []
         for plat in platforms:
             col = f"{plat}{suf}"
