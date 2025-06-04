@@ -1,6 +1,7 @@
 # delivery-sales-analysis
 
 このプロジェクトは配達売上データを可視化する Streamlit アプリです。
+
 `dashboard_demo.html` にシンプルなダッシュボードのサンプルも用意しました。ブラウザで開くだけでレイアウトを確認できます。
 
 ## アプリの特徴
