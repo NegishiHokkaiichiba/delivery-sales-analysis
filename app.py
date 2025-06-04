@@ -52,7 +52,6 @@ def get_valid_months(df):
     return sorted(months)
 
 valid_months = get_valid_months(master)
-
 metric_options = ['全てを表示'] + list(metric_suffix_map.keys())
 
 # --- 入力レイアウト: 左列にまとめる ---
@@ -168,7 +167,11 @@ with tab_summary:
 
     # --- 7. 単一指標表示 ---
     else:
-        suf = metric_suffix_map[metric_label]
+        suf = metric_suffix_map.get(metric_label)
+        if suf is None:
+            st.error('未対応の指標が選択されました')
+            st.stop()
+
         summary = []
         for plat in platforms:
             col = f"{plat}{suf}"
@@ -224,59 +227,65 @@ with tab_summary:
                 st.table(df_summary.set_index('プラットフォーム'))
 
 with tab_daily:
-
     st.subheader('日別推移（曜日・気温・天候）')
-    val_cols = [f"{plat}{suf}" for plat in platforms]
-    pivot = df_sel.groupby('日付')[val_cols].sum().reset_index()
-    # 曜日
-    pivot['曜日'] = pivot['日付'].dt.weekday.map({0:'月',1:'火',2:'水',3:'木',4:'金',5:'土',6:'日'})
-    # 日付 m/d
-    fmt = '%#m/%#d' if sys.platform.startswith('win') else '%-m/%-d'
-    pivot['日付'] = pivot['日付'].dt.strftime(fmt)
-    # カラムリネームプラットフォーム名のみ
-    rename_map = {col: col.replace(suf, '') for col in val_cols}
-    merged = pivot.rename(columns=rename_map)
-    # 天候・気温列初期化
-    merged[['天候','最高気温','最低気温','平均気温']] = ''
+    if metric_label == '全てを表示':
+        st.info('日別推移を表示するには、指標を1つ選択してください。')
+    else:
+        suf = metric_suffix_map.get(metric_label)
+        if suf is None:
+            st.error('未対応の指標が選択されました')
+            st.stop()
+        val_cols = [f"{plat}{suf}" for plat in platforms]
+        pivot = df_sel.groupby('日付')[val_cols].sum().reset_index()
+        # 曜日
+        pivot['曜日'] = pivot['日付'].dt.weekday.map({0:'月',1:'火',2:'水',3:'木',4:'金',5:'土',6:'日'})
+        # 日付 m/d
+        fmt = '%#m/%#d' if sys.platform.startswith('win') else '%-m/%-d'
+        pivot['日付'] = pivot['日付'].dt.strftime(fmt)
+        # カラムリネームプラットフォーム名のみ
+        rename_map = {col: col.replace(suf, '') for col in val_cols}
+        merged = pivot.rename(columns=rename_map)
+        # 天候・気温列初期化
+        merged[['天候','最高気温','最低気温','平均気温']] = ''
 
-    # 気象
-    if Point and Daily:
-        start = period_start
-        end = period_end
-        loc = Point(43.06417, 141.34694)
-        try:
-            weather = Daily(loc, start, end).fetch()[['tmin','tmax','tavg','prcp']].reset_index()
-            weather['日付'] = weather['time'].dt.strftime(fmt)
-            w = weather.set_index('日付')
-            merged = merged.set_index('日付')
-            merged['天候'] = w['prcp'].apply(lambda x: '☔' if x>0 else '☀️').reindex(merged.index, fill_value='')
-            for src, tgt in [('tmax','最高気温'),('tmin','最低気温'),('tavg','平均気温')]:
-                merged[tgt] = w[src].round().astype('Int64').reindex(merged.index, fill_value='')
-            merged = merged.reset_index()
-        except:
-            merged = merged.reset_index()
+        # 気象
+        if Point and Daily:
+            start = period_start
+            end = period_end
+            loc = Point(43.06417, 141.34694)
+            try:
+                weather = Daily(loc, start, end).fetch()[['tmin','tmax','tavg','prcp']].reset_index()
+                weather['日付'] = weather['time'].dt.strftime(fmt)
+                w = weather.set_index('日付')
+                merged = merged.set_index('日付')
+                merged['天候'] = w['prcp'].apply(lambda x: '☔' if x>0 else '☀️').reindex(merged.index, fill_value='')
+                for src, tgt in [('tmax','最高気温'),('tmin','最低気温'),('tavg','平均気温')]:
+                    merged[tgt] = w[src].round().astype('Int64').reindex(merged.index, fill_value='')
+                merged = merged.reset_index()
+            except:
+                merged = merged.reset_index()
 
-    # テーブル表示
-    display_cols = ['日付','曜日'] + list(rename_map.values()) + ['天候','最高気温','最低気温','平均気温']
-    table_df = merged.reindex(columns=display_cols, fill_value='')
-    # 売上系整数化
-    for col in rename_map.values():
-        if col in table_df:
-            table_df[col] = table_df[col].astype(int)
-    # ハイライト最大最小
-    styled = table_df.style.apply(
-        lambda col: ['background-color: yellow' if v==col.max() else 'background-color: lightblue' if v==col.min() else '' for v in col]
-        if col.name in rename_map.values() else ['' for _ in col], axis=0
-    )
-    # インデックス非表示
-    styled = styled.hide(axis='index')
-    st.dataframe(styled, use_container_width=True)
+        # テーブル表示
+        display_cols = ['日付','曜日'] + list(rename_map.values()) + ['天候','最高気温','最低気温','平均気温']
+        table_df = merged.reindex(columns=display_cols, fill_value='')
+        # 売上系整数化
+        for col in rename_map.values():
+            if col in table_df:
+                table_df[col] = table_df[col].astype(int)
+        # ハイライト最大最小
+        styled = table_df.style.apply(
+            lambda col: ['background-color: yellow' if v==col.max() else 'background-color: lightblue' if v==col.min() else '' for v in col]
+            if col.name in rename_map.values() else ['' for _ in col], axis=0
+        )
+        # インデックス非表示
+        styled = styled.hide(axis='index')
+        st.dataframe(styled, use_container_width=True)
 
-    # 折れ線グラフ
-    df_line = table_df.melt(id_vars=['日付'], value_vars=list(rename_map.values()), var_name='プラットフォーム', value_name=metric_label)
-    fig2 = px.line(
-        df_line, x='日付', y=metric_label, color='プラットフォーム',
-        color_discrete_map=color_map, markers=True
-    )
-    fig2.update_layout(xaxis_title='日付', yaxis_title=metric_label, hoverlabel=dict(font_size=16))
-    st.plotly_chart(fig2, use_container_width=True)
+        # 折れ線グラフ
+        df_line = table_df.melt(id_vars=['日付'], value_vars=list(rename_map.values()), var_name='プラットフォーム', value_name=metric_label)
+        fig2 = px.line(
+            df_line, x='日付', y=metric_label, color='プラットフォーム',
+            color_discrete_map=color_map, markers=True
+        )
+        fig2.update_layout(xaxis_title='日付', yaxis_title=metric_label, hoverlabel=dict(font_size=16))
+        st.plotly_chart(fig2, use_container_width=True)
