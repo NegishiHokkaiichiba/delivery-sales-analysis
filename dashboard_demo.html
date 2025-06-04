@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>売上ダッシュボード（デモ）</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f8f9fa;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: #007bff;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.5rem;
+    }
+    main {
+      padding: 2rem;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    section {
+      background-color: white;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    h2 {
+      margin-top: 0;
+      color: #343a40;
+    }
+    .chart-placeholder {
+      background-color: #e9ecef;
+      height: 250px;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6c757d;
+      font-size: 1rem;
+    }
+    .filters {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    .filters label {
+      font-weight: bold;
+      margin-right: 0.5rem;
+    }
+    .filters select, .filters input {
+      padding: 0.5rem;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    🛒 デリバリー売上ダッシュボード（デモ）
+  </header>
+  <main>
+    <section>
+      <h2>📅 概要・フィルター</h2>
+      <div class="filters">
+        <div>
+          <label for="platform">プラットフォーム:</label>
+          <select id="platform">
+            <option>全て</option>
+            <option>Uber</option>
+            <option>Wolt</option>
+            <option>menu</option>
+          </select>
+        </div>
+        <div>
+          <label for="daterange">日付範囲:</label>
+          <input type="date" id="start" /> ～ <input type="date" id="end" />
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>📈 日別売上推移</h2>
+      <div class="chart-placeholder">グラフ（売上・天候・曜日）</div>
+    </section>
+
+    <section>
+      <h2>📊 プラットフォーム別売上構成</h2>
+      <div class="chart-placeholder">円グラフ</div>
+    </section>
+
+    <section>
+      <h2>🧾 カテゴリ別売上ランキング</h2>
+      <div class="chart-placeholder">棒グラフ</div>
+    </section>
+
+    <section>
+      <h2>📝 特記事項・キャンペーン</h2>
+      <ul>
+        <li>5/1：チラシキャンペーン開始（惣菜カテゴリー）</li>
+        <li>5/3：雨天により売上減少</li>
+        <li>5/5：Uber限定20%割引セール</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>
