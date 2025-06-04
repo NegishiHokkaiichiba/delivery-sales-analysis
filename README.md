@@ -12,9 +12,10 @@
    ```bash
    streamlit run app.py
    ```
+   サイドバーから月を 2 つ選択すると、売上の差分や増減率を比較表示できます。
 
 売上データは `delivery_sales_analysis.xlsx` から読み込まれます。
-気象情報や祝日の表示には `meteostat` と `jpholiday` パッケージが必要です。
+天気の表示には `meteostat` パッケージが必要です。
 
 `fetch_weather.py` を実行すると、
 [meteostat](https://github.com/meteostat/meteostat) から天気データを取得して
@@ -46,4 +47,6 @@
    - レビューで指摘があれば修正をプッシュし直します。
    - 問題がなければ "Merge" ボタンを押してブランチを統合します。
 
+codex/アプリの改善
 詳しくは [GitHub Docs](https://docs.github.com/ja) もご覧ください。
+ain
