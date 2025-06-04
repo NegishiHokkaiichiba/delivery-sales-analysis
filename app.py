@@ -52,6 +52,7 @@ def get_valid_months(df):
     return sorted(months)
 
 valid_months = get_valid_months(master)
+
 metric_options = ['全てを表示'] + list(metric_suffix_map.keys())
 
 # --- 入力レイアウト: 左列にまとめる ---
@@ -99,6 +100,7 @@ else:
     jmonth_cmp = ''
     period_start = start_date
     period_end = end_date
+
 platforms = sorted({col.split('_')[0] for col in metric_cols})
 if mode == '月単位' and selected_month > '2024-10' and 'menu' in platforms:
     platforms.remove('menu')
@@ -222,6 +224,7 @@ with tab_summary:
                 st.table(df_summary.set_index('プラットフォーム'))
 
 with tab_daily:
+
     st.subheader('日別推移（曜日・気温・天候）')
     val_cols = [f"{plat}{suf}" for plat in platforms]
     pivot = df_sel.groupby('日付')[val_cols].sum().reset_index()
