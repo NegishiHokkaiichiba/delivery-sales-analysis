@@ -123,15 +123,17 @@ else:
 
     # --- 8. 日別推移 ---
     st.subheader('日別推移（曜日・気温・天候・祝日）')
+    # 指定月に存在する列のみ使用
     val_cols = [f"{plat}{suf}" for plat in platforms]
-    pivot = df_sel.groupby('日付')[val_cols].sum().reset_index()
+    exist_cols = [c for c in val_cols if c in df_sel.columns]
+    pivot = df_sel.groupby('日付')[exist_cols].sum().reset_index()
     # 曜日
     pivot['曜日'] = pivot['日付'].dt.weekday.map({0:'月',1:'火',2:'水',3:'木',4:'金',5:'土',6:'日'})
     # 日付 m/d
     fmt = '%#m/%#d' if sys.platform.startswith('win') else '%-m/%-d'
     pivot['日付'] = pivot['日付'].dt.strftime(fmt)
     # カラムリネームプラットフォーム名のみ
-    rename_map = {col: col.replace(suf, '') for col in val_cols}
+    rename_map = {col: col.replace(suf, '') for col in exist_cols}
     merged = pivot.rename(columns=rename_map)
     # 天候・祝日・気温列初期化
     merged[['天候','最高気温','最低気温','平均気温','祝日']] = ''
