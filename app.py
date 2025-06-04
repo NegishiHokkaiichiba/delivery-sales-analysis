@@ -18,17 +18,31 @@ except ImportError:
 # --- アプリ設定: ワイドレイアウト ---
 st.set_page_config(layout='wide')
 
+# --- データファイル選択 ---
+DEFAULT_FILE = 'delivery_sales_analysis.xlsx'
+uploaded = st.sidebar.file_uploader('売上データ (Excel)', type='xlsx')
+data_source = uploaded if uploaded is not None else DEFAULT_FILE
+
+if Point is None or Daily is None:
+    st.sidebar.info('天候・気温を表示するには meteostat パッケージをインストールしてください。')
+if jpholiday is None:
+    st.sidebar.info('祝日を表示するには jpholiday パッケージをインストールしてください。')
+
 # --- 1. データ読み込みと前処理 ---
 @st.cache_data
-def load_master(path):
-    df = pd.read_excel(path, sheet_name='Master', dtype={'日付': str})
+def load_master(source):
+    df = pd.read_excel(source, sheet_name='Master', dtype={'日付': str})
     # 日付を正しく datetime 型に変換し時刻を除去
     df['日付'] = pd.to_datetime(df['日付'], errors='coerce').dt.normalize()
     df = df.dropna(subset=['日付'])
     df['Month'] = df['日付'].dt.to_period('M').astype(str)
     return df
 
-master = load_master('delivery_sales_analysis.xlsx')
+try:
+    master = load_master(data_source)
+except FileNotFoundError:
+    st.error(f"データファイル {data_source} が見つかりません")
+    st.stop()
 
 # --- 2. 有効月選択（昇順） ---
 metric_suffix_map = {
